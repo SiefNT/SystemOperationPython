@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-# Variáveis globais para armazenar process_sizes, block_sizes e allocations
+# ! Variáveis globais p/ armazenar process_sizes, block_sizes e allocations
 process_sizes = []
 block_sizes = []
 allocations = []
 
-# Funções de alocação (modificadas para trabalhar com a interface)
+
+# * Funções de alocação feitas pensando na interface
 def first_fit(block_size, process_size):
     allocations = ['-1'] * len(process_size)
     for i in range(len(process_size)):
@@ -16,6 +17,7 @@ def first_fit(block_size, process_size):
                 block_size[j] -= process_size[i]
                 break
     return allocations
+
 
 def best_fit(block_size, process_size):
     allocations = ['-1'] * len(process_size)
@@ -30,6 +32,7 @@ def best_fit(block_size, process_size):
             block_size[best_idx] -= process_size[i]
     return allocations
 
+
 def worst_fit(block_size, process_size):
     allocations = ['-1'] * len(process_size)
     for i in range(len(process_size)):
@@ -43,73 +46,33 @@ def worst_fit(block_size, process_size):
             block_size[worst_idx] -= process_size[i]
     return allocations
 
-# Função para atualizar a tela com os resultados
+
+# * Função p/ atualizar a tela com os resultados
 def allocate_memory():
     global process_sizes, block_sizes, allocations
     process_sizes = list(map(int, process_size_entry.get().split(',')))
     block_sizes = list(map(int, block_size_entry.get().split(',')))
     original_block_sizes = block_sizes.copy()
-    
+
     if allocation_method.get() == 'First Fit':
         allocations = first_fit(block_sizes, process_sizes)
     elif allocation_method.get() == 'Best Fit':
         allocations = best_fit(block_sizes, process_sizes)
-    else: # Worst Fit
+    else:  # Worst Fit
         allocations = worst_fit(block_sizes, process_sizes)
-    
+
     result_text = ""
     for i, alloc in enumerate(allocations):
         result_text += f"Process {i + 1} (Size={process_sizes[i]}) -> Block {alloc}\n"
     result_label.config(text=result_text)
 
-    # Simulação visual da memória RAM
+    # * Simulação visual da RAM
     ram_simulation(original_block_sizes, process_sizes, allocations)
 
-# Função para deletar um processo já alocado na memória
-def delete_process():
-    global process_sizes, block_sizes, allocations
-    process_index = int(process_index_entry.get())
-    if process_index >= 1 and process_index <= len(process_sizes):
-        process_size = process_sizes[process_index - 1]
-        allocation = allocations[process_index - 1]
-        if allocation != '-1':
-            block_sizes[int(allocation) - 1] += process_size
-            allocations[process_index - 1] = '-1'
-            # Atualiza a tela após deletar o processo
-            ram_simulation(block_sizes, process_sizes, allocations)
-            messagebox.showinfo("Delete Process", f"Process {process_index} (Size={process_size}) deleted successfully!")
-        else:
-            messagebox.showwarning("Delete Process", f"Process {process_index} is not allocated!")
-    else:
-        messagebox.showerror("Delete Process", "Invalid process index!")
 
-# Função para exibir a próxima página
-def next_page():
-    global current_page
-    if current_page < total_pages:
-        current_page += 1
-        update_page()
-
-# Função para exibir a página anterior
-def prev_page():
-    global current_page
-    if current_page > 1:
-        current_page -= 1
-        update_page()
-
-# Função para atualizar a página exibida
-def update_page():
-    global process_sizes, block_sizes, allocations, current_page
-    start_idx = (current_page - 1) * items_per_page
-    end_idx = min(start_idx + items_per_page, len(process_sizes))
-    displayed_process_sizes = process_sizes[start_idx:end_idx]
-    displayed_block_sizes = block_sizes[start_idx:end_idx]
-    displayed_allocations = allocations[start_idx:end_idx]
-    ram_simulation(displayed_block_sizes, displayed_process_sizes, displayed_allocations)
-
-# Função para simular visualmente a memória RAM
 def ram_simulation(block_sizes, process_sizes, allocations):
-    ram_canvas.delete("all")  # Limpa o canvas antes de desenhar novamente
+    ram_canvas.delete("all")
+
     block_x_start = 50
     block_y_start = 50
     block_width = 300
@@ -117,8 +80,10 @@ def ram_simulation(block_sizes, process_sizes, allocations):
 
     y_offset = 0
     for i, size in enumerate(block_sizes):
-        ram_canvas.create_rectangle(block_x_start, block_y_start + y_offset, block_x_start + block_width, block_y_start + block_height + y_offset, outline="black", fill="grey")
-        ram_canvas.create_text(block_x_start + (block_width / 2), block_y_start + block_height / 2 + y_offset, text=f"Block {i+1} Size: {size}")
+        ram_canvas.create_rectangle(block_x_start, block_y_start + y_offset, block_x_start + block_width,
+                                    block_y_start + block_height + y_offset, outline="black", fill="grey")
+        ram_canvas.create_text(block_x_start + (block_width / 2), block_y_start + block_height / 2 + y_offset,
+                               text=f"Block {i + 1} Size: {size}")
         y_offset += 30
 
     process_y_start = block_y_start + y_offset + 20
@@ -126,14 +91,48 @@ def ram_simulation(block_sizes, process_sizes, allocations):
     for i, size in enumerate(process_sizes):
         alloc = allocations[i]
         if alloc != '-1':
-            ram_canvas.create_rectangle(block_x_start, process_y_start + y_offset, block_x_start + block_width, process_y_start + block_height + y_offset, outline="black", fill="light blue")
-            ram_canvas.create_text(block_x_start + (block_width / 2), process_y_start + block_height / 2 + y_offset, text=f"Process {i+1} Size: {size} -> Block {alloc}")
+            ram_canvas.create_rectangle(block_x_start, process_y_start + y_offset, block_x_start + block_width,
+                                        process_y_start + block_height + y_offset, outline="black", fill="light blue")
+            ram_canvas.create_text(block_x_start + (block_width / 2), process_y_start + block_height / 2 + y_offset,
+                                   text=f"Process {i + 1} Size: {size} -> Block {alloc}")
         else:
-            ram_canvas.create_rectangle(block_x_start, process_y_start + y_offset, block_x_start + block_width, process_y_start + block_height + y_offset, outline="black", fill="red")
-            ram_canvas.create_text(block_x_start + (block_width / 2), process_y_start + block_height / 2 + y_offset, text=f"Process {i+1} Size: {size} (Not Allocated)")
+            ram_canvas.create_rectangle(block_x_start, process_y_start + y_offset, block_x_start + block_width,
+                                        process_y_start + block_height + y_offset, outline="black", fill="red")
+            ram_canvas.create_text(block_x_start + (block_width / 2), process_y_start + block_height / 2 + y_offset,
+                                   text=f"Process {i + 1} Size: {size} (Not Allocated)")
         y_offset += 30
 
-# Configuração da interface gráfica
+
+# * Função p/ deletar um processo já alocado na memória
+def delete_process():
+    global process_sizes, block_sizes, allocations
+    process_index_str = process_index_entry.get()
+    if process_index_str.strip():  # Verifica se a entrada não está vazia
+        process_index = int(process_index_str)
+        if process_index >= 1 and process_index <= len(process_sizes):
+            process_size = process_sizes[process_index - 1]
+            allocation = allocations[process_index - 1]
+            if process_size > 0:  # Verifica se o processo já está vazio
+                if allocation != '-1':
+                    block_sizes[int(allocation) - 1] += process_size
+                    allocations[process_index - 1] = '-1'
+
+                    # ? Atualiza a tela após deletar o processo
+
+                    ram_simulation(block_sizes, process_sizes, allocations)
+                    messagebox.showinfo("Delete Process",
+                                        f"Process {process_index} (Size={process_size}) deleted successfully!")
+                else:
+                    messagebox.showwarning("Delete Process", f"Process {process_index} is not allocated!")
+            else:
+                messagebox.showwarning("Delete Process", f"Process {process_index} is already empty!")
+        else:
+            messagebox.showerror("Delete Process", "Invalid process index!")
+    else:
+        messagebox.showwarning("Delete Process", "Please enter a valid process index!")
+
+
+# ! Configuração da interface gráfica. NÃO MEXER!!!
 root = tk.Tk()
 root.title("Memory Allocation Simulator")
 
@@ -145,8 +144,6 @@ block_size_entry = tk.Entry(root)
 process_index_entry = tk.Entry(root)
 allocate_button = tk.Button(root, text="Allocate Memory", command=allocate_memory)
 delete_button = tk.Button(root, text="Delete Process", command=delete_process)
-next_button = tk.Button(root, text="Next Page", command=next_page)
-prev_button = tk.Button(root, text="Previous Page", command=prev_page)
 result_label = tk.Label(root, text="", justify=tk.LEFT)
 
 method_label = tk.Label(root, text="Allocation Method:")
@@ -166,16 +163,9 @@ allocate_button.pack()
 process_index_label.pack()
 process_index_entry.pack()
 delete_button.pack()
-prev_button.pack(side=tk.LEFT)
-next_button.pack(side=tk.LEFT)
 result_label.pack()
 
-ram_canvas = tk.Canvas(root, width=400, height=300, bg='grey')
+ram_canvas = tk.Canvas(root, width=400, height=300, bg='white')
 ram_canvas.pack()
-
-# Variáveis de paginação
-current_page = 1
-items_per_page = 5
-total_pages = 1
 
 root.mainloop()
