@@ -3,53 +3,49 @@ from tkinter import ttk
 import tkinter as tk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkscrolledframe import ScrolledFrame  # Importe a classe ScrolledFrame
+
 
 class MemoryManager:
     def __init__(self):
         self.total_memory_size = None
         self.page_size = None
         self.swap_size = None
-        self.memory = []  # Added memory attribute
-        self.swap_memory = []
-        self.last_allocated = 0
+        self.memory = []  # Lista para armazenar o status das páginas na memória principal
+        self.swap_memory = []  # Lista para armazenar o status das páginas na swap
 
     def initialize_memory(self, gui_instance):
-        self.total_memory_size = simpledialog.askinteger("Configuração", "Digite o tamanho total da memória (em bytes):")
+        self.total_memory_size = simpledialog.askinteger("Configuração",
+                                                         "Digite o tamanho total da memória (em bytes):")
         self.page_size = simpledialog.askinteger("Configuração", "Digite o tamanho de uma página (em bytes):")
         self.swap_size = simpledialog.askinteger("Configuração", "Digite o tamanho total do swap (em bytes):")
         if self.total_memory_size and self.page_size and self.swap_size:
-            self.memory = [{"ocupada": False, "lotada": False} for _ in range(self.total_memory_size // self.page_size)]
-            self.swap_memory = [{"ocupada": False, "lotada": False} for _ in range(self.swap_size // self.page_size)]
+            self.memory = [{"ocupada": False} for _ in range(self.total_memory_size // self.page_size)]
+            self.swap_memory = [{"ocupada": False} for _ in range(self.swap_size // self.page_size)]
             messagebox.showinfo("Configuração", "Memória inicializada com sucesso.")
             gui_instance.show_memory_graph()
 
     def allocate_memory(self, num_pages):
-        allocated = 0
+        allocated_pages = 0
         for page in self.memory:
-            if allocated == num_pages:
+            if allocated_pages == num_pages:
                 break
             if not page["ocupada"]:
                 page["ocupada"] = True
-                allocated += 1
+                allocated_pages += 1
 
-        if allocated < num_pages:
+        # Se não houve espaço suficiente na memória principal, tenta alocar no swap
+        if allocated_pages < num_pages:
             for page in self.swap_memory:
-                if allocated == num_pages:
+                if allocated_pages == num_pages:
                     break
                 if not page["ocupada"]:
                     page["ocupada"] = True
-                    allocated += 1
+                    allocated_pages += 1
 
-        if allocated < num_pages:
-            return f"Alocação parcial: {allocated} páginas alocadas, não há espaço suficiente para todas as páginas."
-
-        if allocated == len(self.memory) + len(self.swap_memory):
-            for page in self.memory:
-                page["lotada"] = True
-            for page in self.swap_memory:
-                page["lotada"] = True
-
-        return f"{allocated} páginas alocadas."
+        if allocated_pages < num_pages:
+            return f"Alocação parcial: {allocated_pages} páginas alocadas, não há espaço suficiente para todas as páginas."
+        return f"{allocated_pages} páginas alocadas com sucesso."
 
     def deallocate_memory(self, page_number):
         if page_number < len(self.memory):
@@ -68,11 +64,13 @@ class MemoryManager:
             else:
                 return f"Página {swap_page_number} já está livre no swap."
         else:
-            return f"Número de página inválido: {page_number}"
+            return "Número de página inválido."
 
     def get_memory_status(self):
-        status_memory = "\n".join([f"Página {i}: {'Ocupada' if page['ocupada'] else 'Livre'}, {'Lotada' if page['lotada'] else 'Não Lotada' if not page['ocupada'] else 'Lotada'}" for i, page in enumerate(self.memory)])
-        status_swap = "\n".join([f"Página {i}: {'Ocupada' if page['ocupada'] else 'Livre'}, {'Lotada' if page['lotada'] else 'Não Lotada' if not page['ocupada'] else 'Lotada'}" for i, page in enumerate(self.swap_memory)])
+        status_memory = "\n".join(
+            [f"Página {i}: {'Ocupada' if page['ocupada'] else 'Livre'}" for i, page in enumerate(self.memory)])
+        status_swap = "\n".join(
+            [f"Página {i}: {'Ocupada' if page['ocupada'] else 'Livre'}" for i, page in enumerate(self.swap_memory)])
         return status_memory, status_swap
 
 
@@ -82,16 +80,16 @@ class MemoryManagerGUI:
         master.title("Gerenciador de Memória")
         master.geometry("600x400")
         self.memory_manager = MemoryManager()
-        self.memory = self.memory_manager.memory
-        self.swap_memory = self.memory_manager.swap_memory
 
         self.create_widgets()
 
     def create_widgets(self):
-        self.initialize_memory_button = ttk.Button(self.master, text="Inicializar Memória", command=lambda: self.memory_manager.initialize_memory(self))
+        self.initialize_memory_button = ttk.Button(self.master, text="Inicializar Memória",
+                                                   command=lambda: self.memory_manager.initialize_memory(self))
         self.initialize_memory_button.pack(padx=10, pady=5)
 
-        self.allocate_memory_button = ttk.Button(self.master, text="Alocar Memória", command=self.allocate_memory_dialog)
+        self.allocate_memory_button = ttk.Button(self.master, text="Alocar Memória",
+                                                 command=self.allocate_memory_dialog)
         self.allocate_memory_button.pack(padx=10, pady=5)
 
         self.deallocate_memory_button = ttk.Button(self.master, text="Desalocar Memória",
@@ -137,31 +135,38 @@ class MemoryManagerGUI:
         self.text_output.insert(tk.END, status_swap + "\n")
 
     def show_memory_graph(self):
-        # Remover o gráfico anterior se já existir
+        # Limpar o widget do gráfico existente
         for widget in self.master.winfo_children():
-            if isinstance(widget, FigureCanvasTkAgg):
-                widget.get_tk_widget().destroy()
+            if isinstance(widget, ScrolledFrame):
+                widget.destroy()
 
-        # Criar o novo gráfico
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.bar(['Ocupada', 'Livre'], [sum(page['ocupada'] for page in self.memory_manager.memory),
-                                      len(self.memory_manager.memory) - sum(
-                                          page['ocupada'] for page in self.memory_manager.memory)],
-               color=['blue', 'gray'])
-        ax.set_ylabel('Número de Páginas')
-        ax.set_title('Estado da Memória Principal')
+        # Criar um novo ScrolledFrame para o gráfico
+        scrolled_frame = ScrolledFrame(self.master, width=600, height=300)
+        scrolled_frame.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
 
-        # Atualizar o canvas com o novo gráfico
-        canvas = FigureCanvasTkAgg(fig, master=self.master)
+        # Adicionar o canvas do gráfico ao ScrolledFrame
+        canvas_frame = scrolled_frame.display_widget(tk.Frame)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+
+        # Código para criar o gráfico da memória principal
+        memory_status = self.memory_manager.get_memory_status()
+        occupied_memory = sum(page['ocupada'] for page in self.memory_manager.memory)
+        free_memory = len(self.memory_manager.memory) - occupied_memory
+        ax1.bar(['Ocupada', 'Livre'], [occupied_memory, free_memory], color=['blue', 'gray'])
+        ax1.set_ylabel('Número de Páginas')
+        ax1.set_title('Estado da Memória Principal')
+
+        # Código para criar o gráfico do swap
+        occupied_swap = sum(page['ocupada'] for page in self.memory_manager.swap_memory)
+        free_swap = len(self.memory_manager.swap_memory) - occupied_swap
+        ax2.bar(['Ocupada', 'Livre'], [occupied_swap, free_swap], color=['green', 'yellow'])
+        ax2.set_ylabel('Número de Páginas')
+        ax2.set_title('Estado do Swap')
+
+        canvas = FigureCanvasTkAgg(fig, master=canvas_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-        # Atualizar a barra de rolagem se necessário
-        self.master.update_idletasks()
-        self.text_output.config(yscrollcommand=self.scrollbar.set)
-
-        # Atualizar a interface após mostrar o gráfico
-        self.master.update()
+# Execução principal
 root = tk.Tk()
 app = MemoryManagerGUI(root)
 root.mainloop()
